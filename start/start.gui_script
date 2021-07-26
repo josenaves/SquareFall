@@ -1,41 +1,52 @@
+local data = require('main.data')
+
 function init(self)
-	-- Add initialization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
+	-- store the cointainer, title and play button in self
+	self.container = gui.get_node('container')
+	self.title = gui.get_node('title')
+	self.play_button = gui.get_node('play_button')
 
-function final(self)
-	-- Add finalization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function update(self, dt)
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function on_message(self, message_id, message, sender)
-	-- Add message-handling code here
-	-- Learn more: https://defold.com/manuals/message-passing/
-	-- Remove this function if not needed
+	-- set the color of the labels and the button
+	gui.set_color(gui.get_node('text-1'), data.color_two)
+	gui.set_color(gui.get_node('text-2'), data.color_one)
+	gui.set_color(self.play_button, data.color_two)
+	
+	-- acquire input focus so that the player can tap
+	msg.post('.', 'acquire_input_focus')
 end
 
 function on_input(self, action_id, action)
-	-- Add input-handling code here. The game object this script is attached to
-	-- must have acquired input focus:
-	--
-	--    msg.post(".", "acquire_input_focus")
-	--
-	-- All mapped input bindings will be received. Mouse and touch input will
-	-- be received regardless of where on the screen it happened.
-	-- Learn more: https://defold.com/manuals/input/
-	-- Remove this function if not needed
+	-- check if the player touches the screen
+	if action_id == hash('touch') then
+		-- check if the action is pressed
+		if action.pressed then
+			-- check if the action is on the play button
+			if gui.pick_node(self.play_button, action.x, action.y) then
+				-- set pressed_button to true
+				self.pressed_button = true
+				-- slightly scale down the play button so that it looks "pressed"
+				gui.set_scale(self.play_button, vmath.vector3(0.9))
+			end
+		-- check if the action is released and if a button was pressed
+		elseif action.released and self.pressed_button then
+			-- scale the play button back to normal size
+			gui.set_scale(self.play_button, vmath.vector3(1))
+
+			-- check if the action is released on the play button
+			if gui.pick_node(self.play_button, action.x, action.y) then
+				-- release input focus to ignore any further taps from player
+				msg.post('.', 'release_input_focus')
+				-- play the button sound
+				msg.post('main:/sound#button', 'play_sound')
+				-- animate the cointainer off the screen
+				gui.animate(self.container, 'position.y', data.max_y, gui.EASING_INQUINT, 0.4, 0, function()
+					-- send a message to show the game screen
+					msg.post('main:/go', 'show_game')
+				end)
+				-- reset the pressed button to false
+				self.pressed_button = false
+			end
+		end
+	end
 end
 
-function on_reload(self)
-	-- Add reload-handling code here
-	-- Learn more: https://defold.com/manuals/hot-reload/
-	-- Remove this function if not needed
-end
