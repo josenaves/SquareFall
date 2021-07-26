@@ -1,0 +1,44 @@
+local data = require('main.data')
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	msg.post("@render:", "use_fixed_fit_projection", { near = -1, far = 1 })
+
+	-- seed the random number generator
+	math.randomseed(os.time())
+	math.random()
+
+	-- message the render script to set the background color
+	msg.post('@render', hash('clear_color'), { color = data.bg_color })
+
+	-- load the start collection
+	msg.post('go#start', 'load')
+end
+
+
+function on_message(self, message_id, message, sender)
+	-- check the "show_message" message (this will be send from both start.gui_script and gameover.gui_script
+	if message_id == hash('show_game') then
+		-- check the current state of the game to determine which collection to unload
+		if data.state == data.STATE_START then
+			-- unload the start collection
+			msg.post('go#start', 'unload')
+		else
+			-- unload the start collection
+			msg.post('go#gameover', 'unload')
+		end
+		-- load the game collection
+		msg.post('go#game', 'load')
+	-- check for the "show_gameover" message (this will be sent from container.script
+	elseif message_id == hash('show_gameover') then
+		-- unload the game collection
+		msg.post('go#game', 'unload')
+
+		-- load the gameover collection
+		msg.post('go#gameover', 'load')
+		
+	elseif message_id == hash('proxy_loaded') then
+		-- enable the collection
+		msg.post(sender, 'enable')
+	end
+end

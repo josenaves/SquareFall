@@ -1,0 +1,23 @@
+images {
+  image: "/assets/images/circle.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/assets/images/line.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/assets/images/play_button.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/assets/images/replay_button.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
+  image: "/assets/images/square.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+margin: 5
+extrude_borders: 0
+inner_padding: 0
