@@ -1,41 +1,77 @@
+local data = require('main.data')
+
 function init(self)
-	-- Add initialization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function final(self)
-	-- Add finalization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function update(self, dt)
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
+	-- change the state to gameover
+	data.state = data.STATE_GAMEOVER
+	-- store the container, replay button, score and best score labels in self
+	self.container = gui.get_node('container')
+	self.score_label = gui.get_node('score')
+	self.best_score_label = gui.get_node('best-score')
+	self.replay_button = gui.get_node('replay_button')
+	-- reposition the container so that it's off screen
+	gui.set_position(self.container, vmath.vector3(0, -data.max_y, 0))
+	-- set the color of the labels and the button
+	gui.set_color(self.score_label, data.color_one)
+	gui.set_color(self.best_score_label, data.color_two)
+	gui.set_color(self.replay_button, data.color_two)
+	-- animate the container on to the screen
+	gui.animate(self.container, 'position.y', 0, gui.EASING_OUTQUINT, 0.4, 0, function()
+		-- acquire input focus so that the player can tap
+		msg.post('.', 'acquire_input_focus')
+	end)
+	
 end
 
 function on_message(self, message_id, message, sender)
-	-- Add message-handling code here
-	-- Learn more: https://defold.com/manuals/message-passing/
-	-- Remove this function if not needed
+	-- check for the "final_score" message (this will be sent from score.script)
+	if message_id == hash('final_score') then
+		-- update the score labe with the new score
+		gui.set_text(self.score_label, message.score)
+		-- check if the new score is greater than the players best score
+		if message.score > data.sd.best_score then
+			-- if it is, save it as the new best score
+			data.sd.best_score = message.score
+			data.save()
+			-- update the best score label to let the player know they have a new best score
+			gui.set_text(self.best_score_label, 'NEW BEST!')
+			-- play the new best score sound effect
+			msg.post('main:/sound#new_best', 'play_sound')
+		else
+			-- if it's not a new best, set the label to the current best score
+			gui.set_text(self.best_score_label, 'BEST '..data.sd.best_score)
+		end
+	end
 end
 
 function on_input(self, action_id, action)
-	-- Add input-handling code here. The game object this script is attached to
-	-- must have acquired input focus:
-	--
-	--    msg.post(".", "acquire_input_focus")
-	--
-	-- All mapped input bindings will be received. Mouse and touch input will
-	-- be received regardless of where on the screen it happened.
-	-- Learn more: https://defold.com/manuals/input/
-	-- Remove this function if not needed
-end
-
-function on_reload(self)
-	-- Add reload-handling code here
-	-- Learn more: https://defold.com/manuals/hot-reload/
-	-- Remove this function if not needed
+	-- check if the player touches the screen
+	if action_id == hash('touch') then
+		-- check if the action is pressed
+		if action.pressed then
+			if gui.pick_node(self.replay_button, action.x, action.y) then
+				-- set pressed_button to true
+				self.pressed_button = true
+				-- slightly scale down the button so that it looks "pressed"
+				gui.set_scale(self.replay_button, vmath.vector3(0.9))
+			end
+		-- check if the action is released and if a button was pressed
+		elseif action.released and self.pressed_button then
+			-- scale the button back to normal size
+			gui.set_scale(self.replay_button, vmath.vector3(1))
+			-- check if the action is released on the replay button
+			if gui.pick_node(self.replay_button, action.x, action.y) then
+				-- release input focus to ignore any further taps from the player
+				msg.post('.', 'release_input_focus')
+				-- play the button sound effect
+				msg.post('main:/sound#button', 'play_sound')
+				-- animate the container off the screen
+				gui.animate(self.container, 'position.y', data.max_y, gui.EASING_INQUINT, 0.4, 0, function()
+					-- send a message to show the game screen
+					msg.post('main:/go', 'show_game')
+				end)
+				-- reset pressed_button to false
+				self.pressed_button = false
+			end
+		end
+	end
 end
