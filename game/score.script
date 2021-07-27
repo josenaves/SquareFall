@@ -1,0 +1,33 @@
+local data = require('main.data')
+
+function init(self)
+	-- set the initial score to 0
+	self.score = 0
+	-- set the color of the label
+	go.set('#label', 'color', vmath.vector4(0, 0, 0, 0.2))
+end
+
+function final(self)
+	-- check that the state has changed to gameover
+	if data.state == data.STATE_GAMEOVER then
+		-- send the final score to the gameover script
+		msg.post('gameover:/go#gameover', 'final_score', {score = self.score})
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	-- check for the 'increase_score' message (thi swill be sent from square.script)
+	if message_id == hash('increase_score') then
+		-- increase the score by 1
+		self.score = self.score + 1
+		-- update the label text with the new score
+		label.set_text('#label', self.score)
+		-- play the point sound effect
+		msg.post('main:/sound#point', 'play_sound')
+		-- check that the scale of the object is at normal size
+		if go.get_scale().x == 1 then
+			-- animate the scale slightly up and then back to normal
+			go.animate('.', 'scale', go.PLAYBACK_ONCE_PINGPONG, go.get_scale() * 1.15, go.EASING_LINEAR, 0.28)
+		end
+	end
+end

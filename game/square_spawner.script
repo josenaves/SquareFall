@@ -1,0 +1,118 @@
+local data = require('main.data')
+
+function init(self)
+	-- set the initial speed
+	self.speed = 46
+	-- set the initial frequency (the frequency is how often the squares spawn)
+	self.frequency = 22
+	-- create and empty table (this will be used to keep of active squares)
+	self.active = {}
+	-- set square_counter to 0
+	self.square_counter = 0
+end
+
+local function spawn(self)
+	-- get a random x position between 0 and the project width
+	local start_x = math.random(0, data.project_width)
+	-- set the start position
+	local start_position = vmath.vector3(start_x, data.max_y + 24, 1)
+	-- get a random  x position within the width of the line
+	local end_x = math.random(data.line_edge_left + 48, data.line_edge_right - 48)
+	-- set the end position
+	local end_position = vmath.vector3(end_x, data.mid_y - (data.screen_height / 3), 1)
+	-- increase square_counter by 1
+	self.square_counter = self.square_counter + 1
+	-- create the square
+	local square = factory.create('#factory', start_position, nil, {
+		-- pass speed as a property to the object
+		speed = self.speed,
+		-- pass end_position as a property to the object
+		end_position = end_position, 
+		-- is_point is used to determine whether the square will be an enemy square or a point
+		is_point = (self.square_counter % 5 == 0) and true or false
+		
+	}, 1)
+	-- insert the square to the active table
+	table.insert(self.active, square)
+	-- get the frequency as a decimal
+	local frequency = self.frequency * 0.1
+	-- calculate the delay (the amount of the time before another square is spawned)
+	local delay = data.duration(self.speed, start_position, end_position) / frequency
+	-- run the timer (using the spawn_timer handle so that it can be canceled from the on_message function)
+	self.spawn_timer = timer.delay(delay, false, function()
+		spawn(self)
+	end)
+end
+
+local function increase_speed(self)
+	-- the speed and frequency is gradually increased as the player gains points
+	-- check if the current speed is less than 58 (the medium speed)
+	if self.speed < 58 then
+		-- increase the speed by 0.54
+		self.speed = self.speed + 0.54
+	-- check if the current speed is less than 66 (the fast speed)
+	elseif self.speed < 66 then
+		-- increase the speed by 0.2
+		self.speed = self.speed + 0.2
+	end
+
+	-- check if the current frequency is less than 34 (the medium frequency)
+	if self.frequency < 34 then
+		-- increase the frequency by 0.54
+		self.frequency = self.frequency + 0.54
+	-- check if the current speed is less than 44 (the fast speed)
+	elseif self.frequency < 44 then
+		-- increase the frequency by 0.25
+		self.frequency = self.frequency + 0.25
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	-- check for the "start" message (this will be sent from cointainer.script)
+	if message.id == hash('start') then
+		-- call the spawn fuction to spawn the first square
+		spawn(self)
+	-- check for the "increase_speed" message (this will be sent from square.script)
+	elseif message.id == hash('increase_speed') then
+		-- call the increase_speed function
+		increase_speed(self)
+	-- check for the "remove" message (this will be sent from square.script)
+	elseif message.id == hash('remove') then	
+		-- loop through the active squares in the table
+		for k, v in pairs(self.active) do
+			-- message.id will contain the id of the square that needs to be removed
+			-- remove the square from the taable that has the matching id
+			if v == message.id then
+				table.remove(self.active, k)
+				break
+			end
+		end
+		-- scale the square to 0
+		go.animate(message.id, 'scale', go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_LINEAR, 0.3, 0, function()
+			-- delete the square
+			go.delete(message.id, true)
+		end)
+	-- check for the "stop" message (this will be sent from square.script)
+	elseif message.id == hash('stop') then
+		-- cancel the spawn_timer to stop spawning squares
+		timer.cancel(self.spawn_timer)
+		-- loop through the active squares in reverse
+		for i = #self.active, 1, -1 do
+			-- get the active square for this index
+			local square = self.active[index]
+			-- remove the square from the table
+			table.remove(self.active, i)
+			-- cancel the square's animations
+			go.cancel_animations(square, 'euler.z')
+			go.cancel_animations(square, 'position')
+			-- scale the square to 0 (with a 0.5 second delay)
+			go.animate(square, 'delay', go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_LINEAR, 0.3, 0.5, function()
+				-- delete the square
+				go.delete(square, true)
+			end)
+
+			
+		end	
+	end
+	
+end

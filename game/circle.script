@@ -1,0 +1,110 @@
+local data = require('main.data')
+
+function init(self)
+	-- set the color of the circle and the line
+	sprite.set_constant('#sprite', 'tint', data.color_one)
+	sprite.set_constant('line#sprite', 'tint', vmath.vector4(0, 0, 0, 0.05))
+	-- set the initial speed
+	self.speed = 46
+	-- randomly set the direction, 1 = moving to the right, 2 = moving to the left
+	self.direction = math.random(1,2)
+	-- get the width of the line and the circle
+	local line_width = go.get('line#sprite', 'size.x')
+	local circle_width = go.get('#sprite', 'size.x')
+	-- calculate and store the left and right edge of the line in data.lua
+	data.line_edge_left = data.mid_x - (line_width / 2)
+	data.line_edge_right = data.mid_x + (line_width / 2)
+	-- set the left most and right most positions that the circle can move within
+	self.left_x = data.line_edge_left + (circle_width / 2)
+	self.right_x = data.line_edge_right - (circle_width /2)
+	-- set the x position based on the current direction
+	if self.direction == 1 then
+		go.set('.', 'position.x', self.left_x)
+	else
+		go.set('.', 'position.x', self.right_x)
+	end
+end
+
+local function move(self)
+	-- cancel any current movement on the x position
+	go.cancel_animations('.', 'position.x')
+	-- get the new x position to move towards based on the current direction
+	local new_x = (self.direction == 1) and self.right_x or self.left_x
+	-- calculate the duration
+	local duration = data.duration(self.speed, go.get_position().x, new_x)
+	-- start the animation to move the circle
+	go.animate('.', 'position.x', go.PLAYBACK_ONCE_FORWARD, new_x, go.EASING_LINEAR, duration, 0, function()
+		-- once the animation completes, the circle has reached the opposite side of the line 
+		-- run the fuction again in order to sart the moviment back towards the other side 
+		move(self)
+		-- play the rebound sound effect
+		msg.post('main:/sound#rebound', 'play_sound')
+	end)
+	-- switch the direction for next time the fuction is called
+	self.direction = (self.direction == 1) and 2 or 1
+end
+
+local function end_game(self)
+	-- release input focus (so that the player can't tap)
+	msg.post('.', 'release_input_focus')
+	-- cancel the current animations
+	go.cancel_animations('.', 'position.x')
+	-- disable the circle so that it's no longer visible
+	msg.post('.', 'disable')
+	-- emitter state function to check for when the particlefx is finished
+	local function emitter_state_change(self, id, emitter, state)
+		if state == particlefx.EMITTER_STATE_SLEEPING then
+			-- message the container to end the game and move to the game over screen
+			msg.post('containter', 'end_game')
+		end
+	end
+	-- play the particlefx
+	particlefx.play('#explode', emitter_state_change)
+	-- set the color of the particlefx to match the circle
+	particlefx.set_constant('circle#explode', 'emitter', 'tint', data.color_one)
+	-- play the explode sound effect 
+	msg.post('main:/sound#explode', 'play_sound')
+end
+
+local function increase_speed(self)
+	-- the speed is gradually increased as the player gains points
+	-- check if the current speed is less than 56 (the medium speed)
+	if self.speed < 56 then
+		-- increase the speed by 0.45
+		self.speed = self.speed + 0.45
+	-- check if the current speed is less than 64 (the fast speed)
+	elseif self.speed < 64 then
+		-- increase the speed by 0.2
+		self.speed = self.speed + 0.2
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	-- check for the "start" message (this will be sent from container.script)
+	if message_id == hash('start') then
+		-- animate the circle into view by scaling it up to normal size
+		go.animate('.', 'scale', go.PLAYBACK_ONCE_FORWARD, 1, go.EASING_LINEAR, 0.3)
+		-- call the move function to sart moving the circle
+		move(self)
+		-- acquire input focus so that the player can tap
+		msg.post('.', 'acquire_input_focus')
+	-- check for the "increase_speed" message (this will be sent from square.script)
+	elseif message_id == hash('increase_speed') then
+		-- call the increase_speed function
+		increase_speed(self)
+	-- check for the "end_game" message (this will be sent from square.script)	
+	elseif message_id == hash('end_game') then
+		-- call the end_game function
+		end_game(self)
+	end	
+end
+
+function on_input(self, action_id, action)
+	-- check if the player tapped the screen
+	if action_id == hash('touch') and action.pressed then
+		-- call the move function to switch the direction of the circle
+		move(self)
+		-- play the move sound effect
+		msg.post('main:/sound#move', 'play_sound')
+	end
+end

@@ -1,0 +1,31 @@
+local data = require('main.data')
+
+function init(self)
+	-- set the current state to game
+	data.state = data.STATE_GAME
+	-- set the y position of the container object so that it's off screen
+	go.set_position(vmath.vector3(0, -data.max_y, 0))
+	-- animate the container onto the screen
+	go.animate('.', 'position.y', go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_OUTQUINT, 0.4, 0, function()
+		-- now that the game screen is visible message the circle start
+		msg.post('circle', 'start')
+		-- do a 2 second delay and then start spawning the squares
+		timer.delay(2, false, function()
+			msg.post('squares', 'start')
+		end)	
+	end)
+end
+
+function on_message(self, message_id, message, sender)
+	-- check for the "end_game" message (this will be sent from circle.script)
+	if message_id == hash('end_game') then
+		-- do a short delay
+		timer.delay(0.3, false, function()
+			-- animate the container off the screen
+			go.animate('.', 'position.y', go.PLAYBACK_ONCE_FORWARD, data.max_y, go.EASING_INQUINT, 0.4, 0, function()
+				-- send a message to show the game over screen
+				msg.post('main:/go', 'show_gameover')
+			end)
+		end)
+	end
+end
