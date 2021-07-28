@@ -9,7 +9,7 @@ function init(self)
 	math.random()
 
 	-- message the render script to set the background color
-	msg.post('@render', hash('clear_color'), {color = data.bg_color})
+	msg.post('@render:', hash('clear_color'), {color = data.bg_color})
 
 	-- load the start collection
 	msg.post('go#start', 'load')
