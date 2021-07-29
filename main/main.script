@@ -24,7 +24,7 @@ function on_message(self, message_id, message, sender)
 			-- unload the start collection
 			msg.post('go#start', 'unload')
 		else
-			-- unload the start collection
+			-- unload the gameover collection
 			msg.post('go#gameover', 'unload')
 		end
 		-- load the game collection

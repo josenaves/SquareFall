@@ -69,15 +69,15 @@ end
 
 function on_message(self, message_id, message, sender)
 	-- check for the "start" message (this will be sent from cointainer.script)
-	if message.id == hash('start') then
+	if message_id == hash('start') then
 		-- call the spawn fuction to spawn the first square
 		spawn(self)
 	-- check for the "increase_speed" message (this will be sent from square.script)
-	elseif message.id == hash('increase_speed') then
+	elseif message_id == hash('increase_speed') then
 		-- call the increase_speed function
 		increase_speed(self)
 	-- check for the "remove" message (this will be sent from square.script)
-	elseif message.id == hash('remove') then	
+	elseif message_id == hash('remove') then	
 		-- loop through the active squares in the table
 		for k, v in pairs(self.active) do
 			-- message.id will contain the id of the square that needs to be removed
@@ -93,25 +93,23 @@ function on_message(self, message_id, message, sender)
 			go.delete(message.id, true)
 		end)
 	-- check for the "stop" message (this will be sent from square.script)
-	elseif message.id == hash('stop') then
+	elseif message_id == hash('stop') then
 		-- cancel the spawn_timer to stop spawning squares
 		timer.cancel(self.spawn_timer)
 		-- loop through the active squares in reverse
 		for i = #self.active, 1, -1 do
 			-- get the active square for this index
-			local square = self.active[index]
+			local square = self.active[i]
 			-- remove the square from the table
 			table.remove(self.active, i)
 			-- cancel the square's animations
 			go.cancel_animations(square, 'euler.z')
 			go.cancel_animations(square, 'position')
 			-- scale the square to 0 (with a 0.5 second delay)
-			go.animate(square, 'delay', go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_LINEAR, 0.3, 0.5, function()
+			go.animate(square, 'scale', go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_LINEAR, 0.3, 0.5, function()
 				-- delete the square
 				go.delete(square, true)
 			end)
-
-			
 		end	
 	end
 	

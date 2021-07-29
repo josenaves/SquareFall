@@ -55,7 +55,7 @@ local function end_game(self)
 	local function emitter_state_change(self, id, emitter, state)
 		if state == particlefx.EMITTER_STATE_SLEEPING then
 			-- message the container to end the game and move to the game over screen
-			msg.post('containter', 'end_game')
+			msg.post('container', 'end_game')
 		end
 	end
 	-- play the particlefx
